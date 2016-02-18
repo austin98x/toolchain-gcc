@@ -155,6 +155,67 @@ function build_mpc()
 #
 ###############################################################################
 #
+# isl
+#
+function build_isl()
+{
+	_VER=${_ISL_VER}
+	_PACKAGE=isl-${_VER}.tar.bz2
+
+	dir=`package_dir ${_PACKAGE} .tar.bz2`
+
+	if [ -f "$dir/.succeeded" ] ; then
+		print_ignore_build_msg isl
+		return
+	fi
+
+	rm -fr $dir
+	prepare_package ${_PACKAGE} ftp://gcc.gnu.org/pub/gcc/infrastructure/
+
+	cd $dir
+
+	./configure	\
+			--prefix=${PREFIX}/usr		\
+			--with-gmp-prefix=${PREFIX}/usr
+
+	build_and_install
+	mark_build_succeeded
+	cd -
+}
+#
+###############################################################################
+#
+# cloog
+#
+function build_cloog()
+{
+	_VER=${_CLOOG_VER}
+	_PACKAGE=cloog-${_VER}.tar.gz
+
+	dir=`package_dir ${_PACKAGE} .tar.gz`
+
+	if [ -f "$dir/.succeeded" ] ; then
+		print_ignore_build_msg cloog
+		return
+	fi
+
+	rm -fr $dir
+	prepare_package ${_PACKAGE} ftp://gcc.gnu.org/pub/gcc/infrastructure/
+
+	cd $dir
+
+	./configure	\
+			--prefix=${PREFIX}/usr			\
+			--with-gmp-prefix=${PREFIX}/usr	\
+			--with-isl=${PREFIX}/usr
+
+	build_and_install
+	mark_build_succeeded
+	cd -
+}
+#
+###############################################################################
+#
 # gcc
 #
 function build_gcc()
@@ -167,64 +228,34 @@ function build_gcc()
 	_COMMON_CFG="--prefix=${PREFIX}/usr	\
 			--with-gmp=${PREFIX}/usr	\
 			--with-mpfr=${PREFIX}/usr	\
-			--with-mpc=${PREFIX}/usr"
+			--with-mpc=${PREFIX}/usr	\
+			--with-isl=${PREFIX}/usr	\
+			--with-cloog=${PREFIX}/usr  \
+			--enable-languages=c,c++"
 
 	_EXTRA_CFG=""
-	_MAKE_ARGS=""
-	_MAKE_INSTALL_ARGS=""
 
 	dir=`package_dir ${_PACKAGE} .tar.bz2`
 
-	if [ -f "$dir/build-${step}/.succeeded" ] ; then
+	if [ -f "$dir/build/.succeeded" ] ; then
 		print_ignore_build_msg gcc-${step}
 		return
 	fi
 
-	rm -fr $dir
-	prepare_package ${_PACKAGE} https://ftp.gnu.org/gnu/gcc/gcc-${_VER}
+	if [ ! -d $dir ] ; then
+		prepare_package ${_PACKAGE} https://ftp.gnu.org/gnu/gcc/gcc-${_VER}
+	fi
 
-	mkdir $dir/build-${step}
-	cd $dir/build-${step}
-
-	case $step in
-		initial)
-			_EXTRA_CFG="\
-				--enable-languages=c	\
-				--disable-shared	\
-				--disable-libgcc	\
-				--without-headers	\
-				--with-newlib	\
-				"
-			_MAKE_ARGS="all-gcc"
-			_MAKE_INSTALL_ARGS="install-gcc"
-			;;
-		intermediate)
-			_EXTRA_CFG="\
-				--enable-languages=c	\
-				--enable-shared	\
-				"
-			_MAKE_ARGS="all-gcc all-target-libgcc"
-			_MAKE_INSTALL_ARGS="install-gcc install-target-libgcc"
-			;;
-		final)
-			_EXTRA_CFG="\
-				--enable-languages=c,c++	\
-				--enable-shared	\
-				"
-			_MAKE_INSTALL_ARGS="install"
-			;;
-		*)
-			echo "Unkown build step: $step"
-			exit 1
-			;;
-	esac
+	rm -rf $dir/build
+	mkdir $dir/build
+	cd $dir/build
 
 	../configure	\
 			${_COMMON_CFG}	\
 			${_EXTRA_CFG}
 
-	make -j`nproc` ${_MAKE_ARGS}
-	make -j`nproc` ${_MAKE_INSTALL_ARGS}
+	make -j`nproc`
+	make -j`nproc` install
 	mark_build_succeeded
 	cd -
 }
@@ -264,6 +295,8 @@ _GMP_VER=6.1.0
 _MPFR_VER=3.1.3
 _MPC_VER=1.0.3
 _GCC_VER=5.3.0
+_ISL_VER=0.16.1
+_CLOOG_VER=0.18.1
 
 while getopts p:u flag; do
 	case $flag in
@@ -284,9 +317,9 @@ done
 build_gmp
 build_mpfr
 build_mpc
-build_gcc initial
-build_gcc intermediate
-build_gcc final
+build_isl
+build_cloog
+build_gcc
 
 #do_link
 
