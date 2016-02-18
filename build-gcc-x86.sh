@@ -273,20 +273,6 @@ function usage()
 #
 ###############################################################################
 #
-# ln -s everything * to /usr/local/bin
-#
-function do_link()
-{
-	files=`ls ${PREFIX}/usr/bin/${_TARGET}-*`
-
-	for file in $files ; do
-		name=`basename $file | sed 's/unknown-linux-gnu/linux/g'`
-		ln -fs "$file" /usr/local/bin/$name
-	done
-}
-#
-###############################################################################
-#
 # work start from here
 #
 
@@ -320,8 +306,6 @@ build_mpc
 build_isl
 build_cloog
 build_gcc
-
-#do_link
 
 #
 ###############################################################################
